@@ -1,20 +1,20 @@
 const clienteRepository = require('../repository/cliente_repository')
 
-function listar() {
-    return clienteRepository.listar();
+async function listar() {
+    return await clienteRepository.listar();
 }
 
-function inserir(cliente) {
+async function inserir(cliente) {
     if(cliente && cliente.nome && cliente.matricula && cliente.telefone) {
-        clienteRepository.inserir(cliente);
+        return await clienteRepository.inserir(cliente);
     }
     else {
         throw {id:400, message:"Cliente não possui nome, matricula ou telefone"};
     }
 }
 
-function buscarPorId(id) {
-    const cliente = clienteRepository.buscarPorId(id);
+async function buscarPorId(id) {
+    const cliente = await clienteRepository.buscarPorId(id);
     if(cliente) {
         return cliente;
     }
@@ -23,23 +23,31 @@ function buscarPorId(id) {
     }
 }
 
-function atualizar(id, clienteAtualizado) {
-    const cliente = clienteRepository.buscarPorId(id);
+async function atualizar(id, clienteAtualizado) {
+    const cliente = await clienteRepository.buscarPorId(id);
     if(!cliente) {
         throw {id: 404, message: "Cliente não encontrado"};
     }
     
     if(clienteAtualizado && clienteAtualizado.nome && clienteAtualizado.matricula
         && clienteAtualizado.telefone){
-        clienteRepository.atualizar(id, clienteAtualizado);
+        return await clienteRepository.atualizar(id, clienteAtualizado);
     }
     else {
         throw {id: 400, message: "Cliente não possui um dos campos obrigatórios"};
     }
 }
 
-function deletar(id) {
-    const clienteDeletado = clienteRepository.deletar(id);
+async function deletar(id) {
+    try{const clienteDeletado = await clienteRepository.deletar(id); 
+        if(clienteDeletado){
+            return clienteDeletado;
+        }
+    }
+    catch{
+        throw {id: 409, message: "Cliente registrado em uma retirada!"};
+    }
+    const clienteDeletado = await clienteRepository.deletar(id);
     if(clienteDeletado){
         return clienteDeletado;
     }

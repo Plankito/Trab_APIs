@@ -1,61 +1,103 @@
+const logonBD = require('./logon_bd')
+const {Client} = require('pg');
 
-let listaLivros = [];
+//let listaLivros = [];
 let listaIndisponiveis = [];
 let idGerador = 1;
 
-function listar() {
+async function listar() {
+    const client = new Client(logonBD.conexao);
+    await client.connect();
+    const result = await client.query("SELECT * FROM livros");
+    const listaLivros = result.rows;
+    await client.end();
     return listaLivros;
 }
 
-function geraId() {
-    return idGerador++;
+//function geraId() {
+//    return idGerador++;
+//}
+
+async function inserir(livro) {
+    const client = new Client(logonBD.conexao);
+    await client.connect();
+    const result = await client.query(
+        "INSERT INTO livros(autorid, nome, ano, isbn, editora)" +
+        "VALUES ($1,$2,$3,$4,$5) RETURNING *",
+        [livro.autorid, livro.nome, livro.ano, livro.ISBN, livro.editora]);
+    const livroInserido = result.rows[0];
+    await client.end();
+    return livroInserido;
 }
 
-function inserir(livro) {
-    livro.id = geraId();
-    listaLivros.push(livro);
+async function buscarPorId(id){
+    const client = new Client(logonBD.conexao);
+    await client.connect();
+    const res = await client.query('SELECT livros.*,autores.* FROM livros JOIN autores ON livros.autorid = autores.autorid WHERE livros.livroid = $1',[id]);
+    const livro = res.rows[0];
+    await client.end();
+    return livro; 
 }
 
-function buscarPorId(id){
-    return listaLivros.find(function(livro) {
-        return(livro.id === id);        
-    })   
+async function atualizar(id, livro) {
+    const sql = "UPDATE livros set autorid=$1, nome=$2, ano=$3, isbn=$4, editora=$5 WHERE livroid=$6 RETURNING *"
+    const values = [livro.autorid, livro.nome, livro.ano, livro.ISBN, livro.editora, id];
+
+    const client = new Client(logonBD.conexao);
+    await client.connect();
+    const res = await client.query(sql,values);
+    const livroAtualizado = res.rows[0];
+    await client.end();
+    return livroAtualizado;
 }
 
-function atualizar(id, livro) {
-    for(let ind in listaLivros) {
-        if(listaLivros[ind].id === id) {
-            listaLivros[ind] = livro;
-            listaLivros[ind].id = id;
-            return;
-        }
-    }
+async function deletar(id) {
+    const sql = "DELETE FROM livros WHERE livroid=$1 RETURNING *"
+    const values = [id];
+
+    const client = new Client(logonBD.conexao);
+    await client.connect();
+    const res = await client.query(sql,values);
+    const livroDeletado = res.rows[0];
+    await client.end();
+    return livroDeletado;
 }
 
-function deletar(id) {
-    for(let ind in listaLivros) {
-        if(listaLivros[ind].id === id) {
-            return listaLivros.splice(ind,1)[0];
-        }
-    }
+async function disponibilidade(id){
+    const sql = "SELECT disponibilidade FROM livros WHERE livroid=$1"
+    const values = [id];
+
+    const client = new Client(logonBD.conexao);
+    await client.connect();
+    const res = await client.query(sql,values);
+    const livroDisponibilidade = res.rows[0].disponibilidade;
+    await client.end();
+    return livroDisponibilidade;
 }
 
-function indispor(retirada) {
-    listaIndisponiveis.push(retirada);
+
+async function indispor(id) {
+    const sql = "UPDATE livros set disponibilidade=$1 WHERE livroid=$2"
+    const values = [false,id];
+
+    const client = new Client(logonBD.conexao);
+    await client.connect();
+    const res = await client.query(sql,values);
+    const livroIndispor = res.rows[0];
+    await client.end();
+    return livroIndispor;
 }
 
-function verifIndispor(id){
-    return listaIndisponiveis.find(function(retirada) {
-        return(retirada.livroId === id);        
-    })   
-}
+async function dispor(id) {
+    const sql = "UPDATE livros set disponibilidade=$1 WHERE livroid=$2"
+    const values = [true,id];
 
-function dispor(id) {
-    for (let ind in listaIndisponiveis) {
-        if (listaIndisponiveis[ind].livroId === id) {
-            return listaIndisponiveis.splice(ind, 1)[0];
-        }
-    }
+    const client = new Client(logonBD.conexao);
+    await client.connect();
+    const res = await client.query(sql,values);
+    const livroDispor = res.rows[0];
+    await client.end();
+    return livroDispor;
 }
 
 
@@ -74,7 +116,7 @@ module.exports = {
     atualizar,
     deletar,
     indispor,
-    verifIndispor,
     dispor,
+    disponibilidade,
     pesquisarPorLikeNome
 }

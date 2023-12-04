@@ -1,20 +1,20 @@
 const autorRepository = require('../repository/autor_repository')
 
-function listar() {
-    return autorRepository.listar();
+async function listar() {
+    return await autorRepository.listar();
 }
 
-function inserir(autor) {
+async function inserir(autor) {
     if(autor && autor.nome && autor.pais) {
-        autorRepository.inserir(autor);
+        return await autorRepository.inserir(autor);
     }
     else {
         throw {id:400, message:"Autor não possui nome ou país"};
     }
 }
 
-function buscarPorId(id) {
-    const autor = autorRepository.buscarPorId(id);
+async function buscarPorId(id) {
+    const autor = await autorRepository.buscarPorId(id);
     if(autor) {
         return autor;
     }
@@ -23,28 +23,44 @@ function buscarPorId(id) {
     }
 }
 
-function atualizar(id, autorAtualizado) {
-    const autor = autorRepository.buscarPorId(id);
+async function atualizar(id, autorAtualizado) {
+    const autor = await autorRepository.buscarPorId(id);
     if(!autor) {
         throw {id: 404, message: "Autor não encontrado"};
     }
     
     if(autorAtualizado && autorAtualizado.nome && autorAtualizado.pais){
-        autorRepository.atualizar(id, autorAtualizado);
+        if(await buscarPorId(id)){
+            console.log("Aqui!");
+            return await autorRepository.atualizar(id, autorAtualizado);
+        }
+        else{
+            throw {id:404, message:"Autor não encontrado!"};
+        }
+    
+        
     }
     else {
         throw {id: 400, message: "Autor não possui um dos campos obrigatórios"};
     }
 }
 
-function deletar(id) {
-    const autorDeletado = autorRepository.deletar(id);
-    if(autorDeletado){
-        return autorDeletado;
-    }
-    else {
-        throw {id: 404, message: "Autor nao encontrado"};
-    }
+async function deletar(id) {
+        try{const autorDeletado = await autorRepository.deletar(id); 
+            if(autorDeletado){
+                return autorDeletado;
+            }
+        }
+        catch{
+            throw {id: 409, message: "Autor registrado em um livro!"};
+        }
+        const autorDeletado = await autorRepository.deletar(id);
+        if(autorDeletado){
+            return autorDeletado;
+        }
+        else {
+            throw {id: 404, message: "Autor nao encontrado"};
+        }
 }
 
 module.exports = {

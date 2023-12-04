@@ -3,16 +3,18 @@ const clienteRepository = require('../repository/cliente_repository')
 const livroRepository = require('../repository/livro_repository')
 
 
-function listar() {
-    return retiradaRepository.listar();
+async function listar() {
+    return await retiradaRepository.listar();
 }
 
-function inserir(retirada) {
+async function inserir(retirada) {
     if(retirada && retirada.clienteId && retirada.livroId){
-        if(clienteRepository.buscarPorId(retirada.clienteId)
-        && livroRepository.buscarPorId(retirada.livroId)){
-            if(!livroRepository.verifIndispor(retirada.livroId)) 
-            {retiradaRepository.inserir(retirada);
+        if(await clienteRepository.buscarPorId(retirada.clienteId)
+        && await livroRepository.buscarPorId(retirada.livroId)){
+            if(await livroRepository.disponibilidade(retirada.livroId)) 
+            {
+                await livroRepository.indispor(retirada.livroId);
+                return await retiradaRepository.inserir(retirada);
             }  
             else{
                 throw {id:404, message:"Livro não está disponível!"};
@@ -27,8 +29,8 @@ function inserir(retirada) {
     }
 }
 
-function buscarPorId(id) {
-    const retirada = retiradaRepository.buscarPorId(id);
+async function buscarPorId(id) {
+    const retirada = await retiradaRepository.buscarPorId(id);
     if(retirada) {
         return retirada;
     }
@@ -37,26 +39,29 @@ function buscarPorId(id) {
     }
 }
 
-function atualizar(id, retiradaAtualizado) {
-    const retirada = retiradaRepository.buscarPorId(id);
+async function atualizar(id, retiradaAtualizada) {
+    const retirada = await retiradaRepository.buscarPorId(id);
+    
     if(!retirada) {
         throw {id: 404, message: "Retirada não encontrada"};
     }
     
-    if(retiradaAtualizado && retiradaAtualizado.clienteId && retiradaAtualizado.livroId){
-        retiradaRepository.atualizar(id, retiradaAtualizado);
+    if(retiradaAtualizada && retiradaAtualizada.clienteId && retiradaAtualizada.livroId){
+        await livroRepository.dispor(retirada.livroid);
+        await livroRepository.indispor(retiradaAtualizada.livroId);
+        return await retiradaRepository.atualizar(id, retiradaAtualizada);
     }
     else {
         throw {id: 400, message: "Retirada não possui um dos campos obrigatórios"};
     }
 }
 
-function deletar(id) {
-    const retiradaDeletado = retiradaRepository.deletar(id);
-    
-    if(retiradaDeletado){
-
-        return retiradaDeletado;
+async function deletar(id) {
+    const retiradaAtual = await buscarPorId(id);
+    const retiradaDeletada = await retiradaRepository.deletar(id);
+    if(retiradaDeletada){
+        await livroRepository.dispor(retiradaAtual.livroid);
+        return retiradaDeletada;
     }
     else {
         throw {id: 404, message: "Retirada nao encontrada"};
